@@ -31,7 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'posts.apps.PostsConfig',
+    'contents.apps.ContentsConfig',
+    'individuals.apps.IndividualsConfig',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -85,6 +86,8 @@ DATABASES = {
     }
 }
 
+# Custom User model
+AUTH_USER_MODEL = 'individuals.User'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
