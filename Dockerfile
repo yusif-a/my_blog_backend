@@ -8,9 +8,9 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /my_blog_backend
-COPY . .
-
+COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
+COPY . .
 
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
