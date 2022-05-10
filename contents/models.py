@@ -1,18 +1,32 @@
 from django.db import models
+from individuals.models import User
+from commons.abstract_models import CommonInfo
 
 
-class Post(models.Model):
+class Tag(CommonInfo, models.Model):
+    name = models.CharField(max_length=100)
+
+
+class Post(CommonInfo, models.Model):
     title = models.CharField(max_length=200)
     text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    modified_at = models.DateTimeField(auto_now=True)
+    tags = models.ManyToManyField(Tag, related_name='posts')
 
 
-class Comment(models.Model):
+class Comment(CommonInfo, models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE,
                              related_name='comments',
                              editable=False)
     text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    modified_at = models.DateTimeField(auto_now=True)
+    mentioned_user = models.ForeignKey(User, on_delete=models.CASCADE,
+                                       related_name='comments_mentioned_at',
+                                       editable=False,
+                                       null=True)
+    # todo: rating
+
+
+
+
+
+
 
