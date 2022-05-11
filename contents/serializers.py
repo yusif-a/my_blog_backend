@@ -9,10 +9,16 @@ from individuals.serializers import UserSerializer
 class PostSerializer(PartialUpdateSerializerMixin,
                      serializers.HyperlinkedModelSerializer):
     url = NestedHyperlinkedIdentityField(view_name=f'{APP_NAME}:post-detail')
+    creator = UserSerializer(read_only=True)
+
+    def create(self, validated_data):
+        validated_data.update({'creator': self._context['request'].user})
+        return super().create(validated_data)
 
     class Meta:
         model = Post
-        fields = ['url', 'title', 'text', 'created_at', 'modified_at']
+        fields = ['url', 'title', 'text', 'creator', 'created_at', 'modified_at']
+        read_only_fields = ['creator']
 
 
 class CommentSerializer(PartialUpdateSerializerMixin,
