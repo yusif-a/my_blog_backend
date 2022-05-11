@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from rest_framework_extensions.serializers import PartialUpdateSerializerMixin
 from commons.nested_hyperlinked_identity_field import NestedHyperlinkedIdentityField
-from .models import Post, Comment
+from .models import Post, Comment, Tag
 from .config import APP_NAME
+from individuals.serializers import UserSerializer
 
 
 class PostSerializer(PartialUpdateSerializerMixin,
@@ -25,3 +26,19 @@ class CommentSerializer(PartialUpdateSerializerMixin,
     class Meta:
         model = Comment
         fields = ['url', 'post', 'text', 'created_at', 'modified_at']
+
+
+class TagSerializer(PartialUpdateSerializerMixin,
+                    serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name=f'{APP_NAME}:tag-detail')
+    creator = UserSerializer(read_only=True)
+
+    def create(self, validated_data):
+        validated_data.update({'creator': self._context['request'].user})
+        return super().create(validated_data)
+
+    class Meta:
+        model = Tag
+        fields = ['url', 'name', 'creator', 'created_at', 'modified_at']
+        read_only_fields = ['creator']
+
