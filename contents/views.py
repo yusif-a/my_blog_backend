@@ -56,6 +56,19 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
         else:
             return Response(tags_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def list(self, request, *args, **kwargs):
+        self.filter_tags(request)
+        return super().list(request, *args, **kwargs)
+
+    def filter_tags(self, request):
+        """
+        Filters a list of '+' delimited list of tags, assigned to a query_param named 'tags'.
+        """
+        if 'tags' in request.query_params:
+            tag_names = request.query_params['tags'].split()
+            for tag_name in tag_names:
+                self.queryset = self.queryset.filter(tags__name=tag_name)
+
     def get_serializer_context(self):
         context = self.add_request_to_serializer_context(super().get_serializer_context())
         return context
@@ -86,4 +99,3 @@ class TagViewSet(viewsets.ModelViewSet):
     def add_request_to_serializer_context(self, context):
         context.update({'request': self.request})
         return context
-
