@@ -19,3 +19,22 @@ class IsSuperuserCreatorOrReadOnly(BasePermission):
             return True
 
         return obj.creator == request.user
+
+
+class IsCreatorOrReadOnly(BasePermission):
+    """
+    Anyone can create, but only the authenticated creator can modify.
+    """
+    def has_permission(self, request, view):
+        return bool(
+            request.method in SAFE_METHODS or
+            request.method == 'POST' or
+            request.user and
+            request.user.is_authenticated
+        )
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+
+        return obj.creator == request.user

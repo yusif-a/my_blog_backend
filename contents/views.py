@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework_extensions.mixins import NestedViewSetMixin
 from .models import Post, Comment, Tag
-from .serializers import PostSerializer, CommentSerializer, TagSerializer, TagModelSerializer
-from commons.permissions import IsSuperuserCreatorOrReadOnly
+from .serializers import PostSerializer, CommentAuthenticatedSerializer, CommentAnonymousSerializer, \
+    TagSerializer, TagModelSerializer
+from commons.permissions import IsSuperuserCreatorOrReadOnly, IsCreatorOrReadOnly
 
 import logging
 logger = logging.getLogger(__name__)
@@ -16,17 +17,19 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     serializer_class = PostSerializer
     permission_classes = [IsSuperuserCreatorOrReadOnly]
 
+    def perform_create(self, serializer):
+        serializer.save(creator=self.request.user)
+
     @action(detail=True, methods=['post'])
     def set_tags(self, request, pk=None):
         """
         Sets all tags of a Post object.
-        Removing tags implicitly.
+        Removing implicitly tags not included.
         """
-        data = request.data
         existing_tags = []
         new_tags_data = []
         new_tags_names = set()
-        for tag_data in data:
+        for tag_data in request.data:
             try:
                 tag_name = tag_data['name']
             except KeyError:
@@ -62,29 +65,29 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
 
     def filter_tags(self, request):
         """
-        Filters a list of '+' delimited list of tags, assigned to a query_param named 'tags'.
+        Filters a '+' delimited list of tags, assigned to a query_param named 'tags'.
         """
         if 'tags' in request.query_params:
             tag_names = request.query_params['tags'].split()
             for tag_name in tag_names:
                 self.queryset = self.queryset.filter(tags__name=tag_name)
 
-    def get_serializer_context(self):
-        context = self.add_request_to_serializer_context(super().get_serializer_context())
-        return context
-
-    def add_request_to_serializer_context(self, context):
-        context.update({'request': self.request})
-        return context
-
 
 class CommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
+    permission_classes = [IsCreatorOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.request.user and self.request.user.is_authenticated:
+            return CommentAuthenticatedSerializer
+        return CommentAnonymousSerializer
 
     def perform_create(self, serializer):
         post_id = self.kwargs.get('parent_lookup_post')
-        serializer.save(post_id=post_id)
+        creator_data = dict()
+        if self.request.user and self.request.user.is_authenticated:
+            creator_data.update({'creator': self.request.user})
+        serializer.save(post_id=post_id, **creator_data)
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -92,10 +95,6 @@ class TagViewSet(viewsets.ModelViewSet):
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def get_serializer_context(self):
-        context = self.add_request_to_serializer_context(super().get_serializer_context())
-        return context
+    def perform_create(self, serializer):
+        serializer.save(creator=self.request.user)
 
-    def add_request_to_serializer_context(self, context):
-        context.update({'request': self.request})
-        return context
