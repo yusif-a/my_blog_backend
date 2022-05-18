@@ -18,6 +18,10 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def set_tags(self, request, pk=None):
+        """
+        Sets all tags of a Post object.
+        Removing tags implicitly.
+        """
         data = request.data
         existing_tags = []
         new_tags_data = []
@@ -40,11 +44,13 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
         tags_serializer = TagModelSerializer(data=new_tags_data, many=True)
         if tags_serializer.is_valid():
             post = self.get_object()
+            post.tags.clear()
             for tag in existing_tags:
                 post.tags.add(tag)
 
             for tag_data in new_tags_data:
-                Tag.objects.create(creator=request.user, **tag_data)
+                tag_data.update({'creator': request.user})
+                Tag.objects.create(**tag_data)
 
             return Response({'status': 'tags set'})
         else:
