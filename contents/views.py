@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework_extensions.mixins import NestedViewSetMixin
-from .models import Post, Comment, Tag
+from .models import Post, Comment, Tag, PostViews
 from .serializers import PostSerializer, CommentAuthenticatedSerializer, CommentAnonymousSerializer, \
     TagSerializer, TagModelSerializer
 from commons.permissions import IsSuperuserCreatorOrReadOnly, IsCreatorOrReadOnly
@@ -71,6 +71,29 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
             tag_names = request.query_params['tags'].split()
             for tag_name in tag_names:
                 self.queryset = self.queryset.filter(tags__name=tag_name)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.set_post_view(request, instance)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def set_post_view(self, request, post_instance):
+        if request.user and request.user.is_authenticated:
+            if PostViews.objects.filter(post=post_instance, creator=request.user).count() == 0:
+                PostViews.objects.create(post=post_instance, creator=request.user)
+        else:
+            ip_address = self.get_client_ip(request)
+            if PostViews.objects.filter(post=post_instance, ip_address=ip_address).count() == 0:
+                PostViews.objects.create(post=post_instance, ip_address=ip_address)
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
 
 class CommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):

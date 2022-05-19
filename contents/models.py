@@ -7,10 +7,20 @@ class Tag(CommonInfo, models.Model):
     name = models.SlugField(max_length=100, unique=True)
 
 
+class PostViews(CommonInfo, models.Model):
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, editable=False)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, editable=False, null=True)  # authenticated viewer
+    ip_address = models.GenericIPAddressField(null=True, blank=True)  # for anon user
+
+
 class Post(CommonInfo, models.Model):
     title = models.CharField(max_length=200)
     text = models.TextField()
     tags = models.ManyToManyField(Tag, related_name='posts')
+
+    @property
+    def views_count(self):
+        return PostViews.objects.filter(post=self).count()
 
 
 class Comment(CommonInfo, models.Model):

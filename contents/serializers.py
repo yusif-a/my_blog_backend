@@ -32,7 +32,7 @@ class PostSerializer(PartialUpdateSerializerMixin,
 
     class Meta:
         model = Post
-        fields = ['url', 'title', 'text', 'tags', 'creator', 'created_at', 'modified_at']
+        fields = ['url', 'title', 'text', 'tags', 'creator', 'views_count', 'created_at', 'modified_at']
         read_only_fields = ['creator']
 
 
