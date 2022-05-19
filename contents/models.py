@@ -18,6 +18,9 @@ class PostVotes(CommonInfo, models.Model):
     VOTE_CHOICES = [(+1, 'up_vote'), (-1, 'down_vote')]
     vote = models.IntegerField(choices=VOTE_CHOICES)
 
+    class Meta:
+        unique_together = [['creator', 'post']]
+
 
 class Post(CommonInfo, models.Model):
     title = models.CharField(max_length=200)
@@ -37,6 +40,9 @@ class CommentVotes(CommonInfo, models.Model):
     comment = models.ForeignKey('Comment', on_delete=models.CASCADE, editable=False)
     VOTE_CHOICES = [(+1, 'up_vote'), (-1, 'down_vote')]
     vote = models.IntegerField(choices=VOTE_CHOICES)
+
+    class Meta:
+        unique_together = [['creator', 'comment']]
 
 
 class Comment(CommonInfo, models.Model):

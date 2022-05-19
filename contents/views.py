@@ -6,35 +6,24 @@ from rest_framework_extensions.mixins import NestedViewSetMixin
 from .models import Post, Comment, Tag, PostViews, PostVotes, CommentVotes
 from .serializers import PostSerializer, CommentAuthenticatedSerializer, CommentAnonymousSerializer, \
     TagSerializer, TagModelSerializer, PostVotesSerializer, CommentVotesSerializer
+from .mixins import VoteViewSetMixin
 from commons.permissions import IsSuperuserCreatorOrReadOnly, IsCreatorOrReadOnly
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
+class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsSuperuserCreatorOrReadOnly]
 
+    vote_model = PostVotes
+    vote_model_foreign_key_field_name = 'post'
+    vote_serializer_class = PostVotesSerializer
+
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
-
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedOrReadOnly])
-    def vote(self, request, pk=None):
-        serializer = PostVotesSerializer(data=request.data)
-        if serializer.is_valid():
-            post = self.get_object()
-            serializer.save(post=post, creator=request.user)
-            return Response({'status': 'vote received'})
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticatedOrReadOnly])
-    def delete_vote(self, request, pk=None):
-        post = self.get_object()
-        PostVotes.objects.filter(post=post, creator=request.user).delete()
-        return Response({'status': 'vote deleted'}, status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def set_tags(self, request, pk=None):
@@ -112,31 +101,14 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
             ip = request.META.get('REMOTE_ADDR')
         return ip
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({'request': self.request})
-        return context
 
-
-class CommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
+class CommentViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     permission_classes = [IsCreatorOrReadOnly]
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedOrReadOnly])
-    def vote(self, request, pk=None, **kwargs):
-        serializer = CommentVotesSerializer(data=request.data)
-        if serializer.is_valid():
-            comment = self.get_object()
-            serializer.save(comment=comment, creator=request.user)
-            return Response({'status': 'vote received'})
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticatedOrReadOnly])
-    def delete_vote(self, request, pk=None, **kwargs):
-        comment = self.get_object()
-        CommentVotes.objects.filter(comment=comment, creator=request.user).delete()
-        return Response({'status': 'vote deleted'}, status=status.HTTP_204_NO_CONTENT)
+    vote_model = CommentVotes
+    vote_model_foreign_key_field_name = 'comment'
+    vote_serializer_class = CommentVotesSerializer
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_authenticated:
@@ -149,11 +121,6 @@ class CommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
         if self.request.user and self.request.user.is_authenticated:
             creator_data.update({'creator': self.request.user})
         serializer.save(post_id=post_id, **creator_data)
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({'request': self.request})
-        return context
 
 
 class TagViewSet(viewsets.ModelViewSet):
