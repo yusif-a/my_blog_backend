@@ -1,6 +1,15 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
+class IsSuperuser(BasePermission):
+    """
+    Allows access only to superusers.
+    """
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_superuser)
+
+
 class IsSuperuserCreatorOrReadOnly(BasePermission):
     """
     Custom permission to only allow superusers to create, and edit their own created objects.
