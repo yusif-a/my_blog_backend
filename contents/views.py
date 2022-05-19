@@ -3,9 +3,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework_extensions.mixins import NestedViewSetMixin
-from .models import Post, Comment, Tag, PostViews
+from .models import Post, Comment, Tag, PostViews, PostVotes, CommentVotes
 from .serializers import PostSerializer, CommentAuthenticatedSerializer, CommentAnonymousSerializer, \
-    TagSerializer, TagModelSerializer
+    TagSerializer, TagModelSerializer, PostVotesSerializer, CommentVotesSerializer
 from commons.permissions import IsSuperuserCreatorOrReadOnly, IsCreatorOrReadOnly
 
 import logging
@@ -20,9 +20,26 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedOrReadOnly])
+    def vote(self, request, pk=None):
+        serializer = PostVotesSerializer(data=request.data)
+        if serializer.is_valid():
+            post = self.get_object()
+            serializer.save(post=post, creator=request.user)
+            return Response({'status': 'vote received'})
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticatedOrReadOnly])
+    def delete_vote(self, request, pk=None):
+        post = self.get_object()
+        PostVotes.objects.filter(post=post, creator=request.user).delete()
+        return Response({'status': 'vote deleted'}, status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, methods=['post'])
     def set_tags(self, request, pk=None):
         """
+        Accepts a list of tags.
         Sets all tags of a Post object.
         Removing implicitly tags not included.
         """
@@ -95,10 +112,31 @@ class PostViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
             ip = request.META.get('REMOTE_ADDR')
         return ip
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context
+
 
 class CommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     permission_classes = [IsCreatorOrReadOnly]
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedOrReadOnly])
+    def vote(self, request, pk=None, **kwargs):
+        serializer = CommentVotesSerializer(data=request.data)
+        if serializer.is_valid():
+            comment = self.get_object()
+            serializer.save(comment=comment, creator=request.user)
+            return Response({'status': 'vote received'})
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticatedOrReadOnly])
+    def delete_vote(self, request, pk=None, **kwargs):
+        comment = self.get_object()
+        CommentVotes.objects.filter(comment=comment, creator=request.user).delete()
+        return Response({'status': 'vote deleted'}, status=status.HTTP_204_NO_CONTENT)
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_authenticated:
@@ -111,6 +149,11 @@ class CommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
         if self.request.user and self.request.user.is_authenticated:
             creator_data.update({'creator': self.request.user})
         serializer.save(post_id=post_id, **creator_data)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context
 
 
 class TagViewSet(viewsets.ModelViewSet):

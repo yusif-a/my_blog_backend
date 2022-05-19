@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_extensions.serializers import PartialUpdateSerializerMixin
 from commons.nested_hyperlinked_identity_field import NestedHyperlinkedIdentityField
-from .models import Post, Comment, Tag
+from .models import Post, Comment, Tag, PostVotes, CommentVotes
 from .config import APP_NAME
 from individuals.serializers import UserSerializer
 from individuals.models import User
@@ -29,10 +29,18 @@ class PostSerializer(PartialUpdateSerializerMixin,
     url = NestedHyperlinkedIdentityField(view_name=f'{APP_NAME}:post-detail')
     creator = UserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    my_vote = serializers.SerializerMethodField()
+
+    def get_my_vote(self, obj):
+        try:
+            vote = PostVotes.objects.get(post=obj, creator=self._context['request'].user).vote
+        except PostVotes.DoesNotExist:
+            vote = 0
+        return vote
 
     class Meta:
         model = Post
-        fields = ['url', 'title', 'text', 'tags', 'creator', 'views_count', 'created_at', 'modified_at']
+        fields = ['url', 'title', 'text', 'tags', 'creator', 'views_count', 'rating', 'my_vote', 'created_at', 'modified_at']
         read_only_fields = ['creator']
 
 
@@ -50,6 +58,15 @@ class CommentAuthenticatedSerializer(PartialUpdateSerializerMixin,
 
     creator_name = serializers.CharField(read_only=True)
     creator_email = serializers.EmailField(read_only=True)
+
+    my_vote = serializers.SerializerMethodField()
+
+    def get_my_vote(self, obj):
+        try:
+            vote = CommentVotes.objects.get(comment=obj, creator=self._context['request'].user).vote
+        except CommentVotes.DoesNotExist:
+            vote = 0
+        return vote
 
     def create(self, validated_data):
         # method 'create' is overridden instead of 'save', and 'update' is also not;
@@ -74,7 +91,7 @@ class CommentAuthenticatedSerializer(PartialUpdateSerializerMixin,
     class Meta:
         model = Comment
         fields = ['url', 'post', 'text', 'creator', 'mentioned_user', 'creator_name', 'creator_email',
-                  'mentioned_user_name', 'created_at', 'modified_at']
+                  'mentioned_user_name', 'rating', 'my_vote', 'created_at', 'modified_at']
 
 
 class CommentAnonymousSerializer(CommentAuthenticatedSerializer):
@@ -84,4 +101,18 @@ class CommentAnonymousSerializer(CommentAuthenticatedSerializer):
     class Meta:
         model = Comment
         fields = ['url', 'post', 'text', 'creator', 'mentioned_user', 'creator_name', 'creator_email',
-                  'mentioned_user_name', 'created_at', 'modified_at']
+                  'mentioned_user_name', 'rating', 'my_vote', 'created_at', 'modified_at']
+
+
+class PostVotesSerializer(PartialUpdateSerializerMixin, serializers.HyperlinkedModelSerializer):
+
+    class Meta:
+        model = PostVotes
+        fields = ['vote']
+
+
+class CommentVotesSerializer(PartialUpdateSerializerMixin, serializers.HyperlinkedModelSerializer):
+
+    class Meta:
+        model = CommentVotes
+        fields = ['vote']
