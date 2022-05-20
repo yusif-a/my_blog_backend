@@ -26,7 +26,7 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
         serializer.save(creator=self.request.user)
 
     @action(detail=True, methods=['post'])
-    def set_tags(self, request, pk=None):
+    def set_tags(self, request, **kwargs):
         """
         Accepts a list of tags.
         Sets all tags of a Post object.
@@ -53,13 +53,12 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
         tags_serializer = TagModelSerializer(data=new_tags_data, many=True)
         if tags_serializer.is_valid():
             post = self.get_object()
-            post.tags.clear()
-            for tag in existing_tags:
-                post.tags.add(tag)
 
+            new_tags = []
             for tag_data in new_tags_data:
                 tag_data.update({'creator': request.user})
-                Tag.objects.create(**tag_data)
+                new_tags.append(Tag.objects.create(**tag_data))
+            post.tags.set(existing_tags + new_tags)
 
             return Response({'status': 'tags set'})
         else:
