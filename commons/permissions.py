@@ -1,6 +1,11 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
+class ReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS
+
+
 class IsSuperuser(BasePermission):
     """
     Allows access only to superusers.
@@ -30,7 +35,7 @@ class IsSuperuserCreatorOrReadOnly(BasePermission):
         return obj.creator == request.user
 
 
-class IsCreatorOrReadOnly(BasePermission):
+class IsCreatorOrAnyoneCanCreateOrReadOnly(BasePermission):
     """
     Anyone can create, but only the authenticated creator can modify.
     """
@@ -38,6 +43,24 @@ class IsCreatorOrReadOnly(BasePermission):
         return bool(
             request.method in SAFE_METHODS or
             request.method == 'POST' or
+            request.user and
+            request.user.is_authenticated
+        )
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+
+        return obj.creator == request.user
+
+
+class IsCreatorOrReadOnly(BasePermission):
+    """
+    Only the authenticated creator can modify.
+    """
+    def has_permission(self, request, view):
+        return bool(
+            request.method in SAFE_METHODS or
             request.user and
             request.user.is_authenticated
         )

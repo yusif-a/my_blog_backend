@@ -1,13 +1,14 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, DjangoModelPermissions
 from rest_framework_extensions.mixins import NestedViewSetMixin
 from .models import Post, Comment, Tag, PostViews, PostVotes, CommentVotes
 from .serializers import PostSerializer, CommentAuthenticatedSerializer, CommentAnonymousSerializer, \
     TagSerializer, TagModelSerializer, PostVotesSerializer, CommentVotesSerializer
 from .mixins import VoteViewSetMixin
-from commons.permissions import IsSuperuserCreatorOrReadOnly, IsCreatorOrReadOnly
+from commons.permissions import IsSuperuser, IsCreatorOrReadOnly, IsCreatorOrAnyoneCanCreateOrReadOnly, \
+    ReadOnly
 
 import logging
 logger = logging.getLogger(__name__)
@@ -16,7 +17,8 @@ logger = logging.getLogger(__name__)
 class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = [IsSuperuserCreatorOrReadOnly]
+    permission_classes = [IsSuperuser | (IsCreatorOrReadOnly & DjangoModelPermissions) |
+                          ReadOnly]
 
     vote_model = PostVotes
     vote_model_foreign_key_field_name = 'post'
@@ -102,7 +104,7 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
 
 class CommentViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
     queryset = Comment.objects.all()
-    permission_classes = [IsCreatorOrReadOnly]
+    permission_classes = [IsCreatorOrAnyoneCanCreateOrReadOnly]
 
     vote_model = CommentVotes
     vote_model_foreign_key_field_name = 'comment'

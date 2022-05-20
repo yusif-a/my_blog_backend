@@ -32,6 +32,9 @@ class PostSerializer(PartialUpdateSerializerMixin,
     my_vote = serializers.SerializerMethodField()
 
     def get_my_vote(self, obj):
+        if not self._context['request'].user or not self._context['request'].user.is_authenticated:
+            return None
+
         try:
             vote = PostVotes.objects.get(post=obj, creator=self._context['request'].user).vote
         except PostVotes.DoesNotExist:
@@ -98,10 +101,12 @@ class CommentAnonymousSerializer(CommentAuthenticatedSerializer):
     creator_name = serializers.CharField(max_length=100, allow_null=False, allow_blank=False)
     creator_email = serializers.EmailField(allow_null=False, allow_blank=False, write_only=True)
 
+    # my_vote = None
+
     class Meta:
         model = Comment
         fields = ['url', 'post', 'text', 'creator', 'mentioned_user', 'creator_name', 'creator_email',
-                  'mentioned_user_name', 'rating', 'my_vote', 'created_at', 'modified_at']
+                  'mentioned_user_name', 'rating', 'created_at', 'modified_at']
 
 
 class PostVotesSerializer(PartialUpdateSerializerMixin, serializers.HyperlinkedModelSerializer):
