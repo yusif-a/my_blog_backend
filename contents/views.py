@@ -54,10 +54,9 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
         if tags_serializer.is_valid():
             post = self.get_object()
 
-            new_tags = []
             for tag_data in new_tags_data:
                 tag_data.update({'creator': request.user})
-                new_tags.append(Tag.objects.create(**tag_data))
+            new_tags = Tag.objects.bulk_create([Tag(**tag_data) for tag_data in new_tags_data])
             post.tags.set(existing_tags + new_tags)
 
             return Response({'status': 'tags set'})
