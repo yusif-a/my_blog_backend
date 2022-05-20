@@ -36,12 +36,23 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def add_user(self, request, **kwargs):
+        #  todo: input validation
         user_id = request.data.get('user_id')
         user = User.objects.get(id=user_id)
         group = self.get_object()
         group.user_set.add(user)
 
         return Response({'status': 'User added'})
+
+    @action(detail=True, methods=['post'])
+    def remove_user(self, request, **kwargs):
+        #  todo: input validation
+        user_id = request.data.get('user_id')
+        user = User.objects.get(id=user_id)
+        group = self.get_object()
+        group.user_set.remove(user)
+
+        return Response({'status': 'User removed'})
 
 
 class PermissionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
