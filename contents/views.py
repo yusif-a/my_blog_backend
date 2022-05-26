@@ -34,26 +34,10 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
         Sets all tags of a Post object.
         Removing implicitly tags not included.
         """
-        existing_tags = []
-        new_tags_data = []
-        new_tags_names = set()
-        for tag_data in request.data:
-            try:
-                tag_name = tag_data['name']
-            except KeyError:
-                pass  # will let serializer validation handle this
-            else:
-                try:
-                    tag = Tag.objects.get(name=tag_name)
-                except Tag.DoesNotExist:
-                    if tag_name not in new_tags_names:
-                        new_tags_names.add(tag_name)
-                        new_tags_data.append(tag_data)
-                else:
-                    existing_tags.append(tag)
+        existing_tags, new_tags_data = self.separate_tags_data(request.data)
 
-        tags_serializer = TagModelSerializer(data=new_tags_data, many=True)
-        if tags_serializer.is_valid():
+        new_tags_serializer = TagModelSerializer(data=new_tags_data, many=True)
+        if new_tags_serializer.is_valid():
             post = self.get_object()
 
             for tag_data in new_tags_data:
@@ -63,7 +47,24 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
 
             return Response({'status': 'tags set'})
         else:
-            return Response(tags_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(new_tags_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def separate_tags_data(self, tags_data):
+        existing_tags = []
+        new_tags_data = []
+        new_tags_names = set()
+        for tag_data in tags_data:
+            tag_name = tag_data['name']
+            try:
+                tag = Tag.objects.get(name=tag_name)
+            except Tag.DoesNotExist:
+                if tag_name not in new_tags_names:
+                    new_tags_names.add(tag_name)
+                    new_tags_data.append(tag_data)
+            else:
+                existing_tags.append(tag)
+
+        return existing_tags, new_tags_data
 
     def list(self, request, *args, **kwargs):
         self.filter_tags(request)
