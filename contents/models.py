@@ -4,7 +4,7 @@ from commons.abstract_models import CommonInfo
 
 
 class Tag(CommonInfo, models.Model):
-    name = models.SlugField(max_length=100, unique=True)
+    name = models.SlugField(max_length=100, unique=True, null=False, blank=False)
 
 
 class PostViews(CommonInfo, models.Model):
