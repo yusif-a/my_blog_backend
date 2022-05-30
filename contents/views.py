@@ -72,12 +72,16 @@ class PostViewSet(NestedViewSetMixin, VoteViewSetMixin, viewsets.ModelViewSet):
 
     def filter_tags(self, request):
         """
-        Filters a '+' delimited list of tags, assigned to a query_param named 'tags'.
+        Filters '+' delimited lists of tags,
+        assigned to query_params named 'include_tags' and 'exclude_tags'.
         """
-        if 'tags' in request.query_params:
-            tag_names = request.query_params['tags'].split()
-            for tag_name in tag_names:
-                self.queryset = self.queryset.filter(tags__name=tag_name)
+        include_tag_names = request.query_params.get('include_tags', '').split()
+        for tag_name in include_tag_names:
+            self.queryset = self.queryset.filter(tags__name=tag_name)
+
+        exclude_tag_names = request.query_params.get('exclude_tags', '').split()
+        for tag_name in exclude_tag_names:
+            self.queryset = self.queryset.exclude(tags__name=tag_name)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
