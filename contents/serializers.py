@@ -60,7 +60,6 @@ class CommentAuthenticatedSerializer(PartialUpdateSerializerMixin,
                                                 allow_blank=True, required=False)
 
     creator_name = serializers.CharField(read_only=True)
-    creator_email = serializers.EmailField(read_only=True)
 
     my_vote = serializers.SerializerMethodField()
 
@@ -84,7 +83,7 @@ class CommentAuthenticatedSerializer(PartialUpdateSerializerMixin,
 
     def validate_mentioned_user_name(self, value):
         try:
-            if value is not None:
+            if value:
                 User.objects.get(username=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("Mentioned user does not exist.")
@@ -93,7 +92,7 @@ class CommentAuthenticatedSerializer(PartialUpdateSerializerMixin,
 
     class Meta:
         model = Comment
-        fields = ['url', 'post', 'text', 'creator', 'mentioned_user', 'creator_name', 'creator_email',
+        fields = ['url', 'post', 'text', 'creator', 'mentioned_user', 'creator_name',
                   'mentioned_user_name', 'rating', 'my_vote', 'created_at', 'modified_at']
 
 
